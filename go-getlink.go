@@ -121,13 +121,28 @@ func main() {
 
 		fmt.Println("\nFound", len(foundUrls), "unique urls:")
 
-		for url, _ := range foundUrls {
-			fmt.Println(" - " + url)
-		}
+		// Display results
+		//for url, _ := range foundUrls {
+		//fmt.Println(" - " + url)
+		//}
 
 		close(chUrls)
 
+		save_urls(foundUrls)
 		mark_urls_done(seedUrls)
+	}
+}
+
+func save_urls(urls map[string]bool) {
+
+	db, err := sql.Open("mysql", "root:hallo@/gogetlink?charset=utf8")
+	checkErr(err)
+	stmt, err := db.Prepare("insert into urlresults (id,url) values (null, ? )")
+	checkErr(err)
+
+	for url, _ := range urls {
+		_, err := stmt.Exec(url)
+		checkErr(err)
 	}
 }
 
