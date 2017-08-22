@@ -6,6 +6,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/net/html"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -85,13 +86,15 @@ func save_links(urls []string, rootId int) {
 
 func main() {
 
+	reset_all_urls()
+
 	batchsize := 5
 
 	for {
 		foundUrls := make(map[string]bool)
 		seedUrls := get_urls(batchsize)
 
-		if len(seedUrls) != batchsize {
+		if len(seedUrls) == 0 {
 			break
 		}
 
@@ -128,8 +131,37 @@ func main() {
 	}
 }
 
-func mark_urls_done(urls []Url) {
+func set_url_status(urls []Url, status int) {
 
+	db, err := sql.Open("mysql", "root:hallo@/gogetlink?charset=utf8")
+	checkErr(err)
+	stmt, err := db.Prepare("update domains set status=? where id=?")
+	checkErr(err)
+
+	for _, url := range urls {
+		_, err := stmt.Exec(status, url.id)
+		checkErr(err)
+
+	}
+}
+
+func reset_all_urls() {
+
+	db, err := sql.Open("mysql", "root:hallo@/gogetlink?charset=utf8")
+	checkErr(err)
+	stmt, err := db.Prepare("update domains set status=0")
+	checkErr(err)
+	_, err = stmt.Exec()
+	checkErr(err)
+
+}
+
+func mark_urls_done(urls []Url) {
+	set_url_status(urls, 1)
+}
+
+func reset_urls(urls []Url) {
+	set_url_status(urls, 0)
 }
 
 func get_urls(num int) []Url {
@@ -137,7 +169,7 @@ func get_urls(num int) []Url {
 
 	db, err := sql.Open("mysql", "root:hallo@/gogetlink?charset=utf8")
 	checkErr(err)
-	rows, err := db.Query("SELECT * FROM urls where status = 0 limit " + string(num))
+	rows, err := db.Query("SELECT * FROM domains where status = 0 limit " + strconv.Itoa(num))
 	checkErr(err)
 
 	var id int
